@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FrameForge — Transparency Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;--accent:#7c6aff;--accent2:#ff6ab0;--green:#4fffb0;--text:#e8e8f0;--muted:#6b6b88;--c1:#1a1a2e;--c2:#16213e;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none;z-index:0}
+  .orb{position:fixed;width:600px;height:600px;border-radius:50%;filter:blur(120px);opacity:.12;pointer-events:none;z-index:0}
+  .o1{background:var(--accent);top:-200px;left:-100px}
+  .o2{background:var(--accent2);bottom:-200px;right:-100px}
+  .wrap{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:48px 24px 80px}
+  header{margin-bottom:40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .logo h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .logo p{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:3px}
+  .back-btn{display:flex;align-items:center;gap:8px;padding:8px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;text-decoration:none;transition:all .2s}
+  .back-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:20px}
+  .clabel{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .clabel::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block}
+  .dropzone{border:2px dashed var(--border);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .25s;background:var(--surface2)}
+  .dropzone:hover,.dropzone.over{border-color:var(--accent);background:rgba(124,106,255,.06)}
+  .dropzone .icon{font-size:42px;display:block;margin-bottom:10px}
+  .dropzone h3{font-size:16px;font-weight:700;margin-bottom:5px}
+  .dropzone p{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+  .pick-btn{display:inline-block;margin-top:16px;padding:9px 22px;background:linear-gradient(135deg,var(--accent),#9b8aff);border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer}
+  #fi{display:none}
+  .preview-outer{display:none}
+  .bg-switcher{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center}
+  .bg-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-right:4px}
+  .bg-swatch{width:36px;height:36px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0}
+  .bg-swatch:hover{transform:scale(1.1)}
+  .bg-swatch.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,255,.3)}
+  .bg-swatch.checker{background-image:linear-gradient(45deg,#888 25%,transparent 25%),linear-gradient(-45deg,#888 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#888 75%),linear-gradient(-45deg,transparent 75%,#888 75%);background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0;background-color:#fff}
+  .custom-color-wrap{display:flex;align-items:center;gap:8px}
+  .custom-color-wrap label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+  input[type=color]{width:36px;height:36px;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:none;padding:2px}
+  .stage-wrap{border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;transition:background .3s;min-height:300px}
+  .stage-wrap.checker-bg{background-image:linear-gradient(45deg,#aaa 25%,transparent 25%),linear-gradient(-45deg,#aaa 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#aaa 75%),linear-gradient(-45deg,transparent 75%,#aaa 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0;background-color:#eee}
+  #mediaEl{display:block;transition:all .2s;max-width:100%}
+  .size-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:20px}
+  @media(max-width:560px){.size-controls{grid-template-columns:1fr 1fr}}
+  .size-item label{display:block;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:6px;letter-spacing:.5px}
+  .size-item input[type=number]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;padding:9px 12px;outline:none;transition:border-color .2s}
+  .size-item input[type=number]:focus{border-color:var(--accent)}
+  .lock-btn{padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap;align-self:flex-end}
+  .lock-btn.locked{border-color:var(--green);color:var(--green);background:rgba(79,255,176,.06)}
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .preset-btn{padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s}
+  .preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .file-info{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+  .pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+  .pill span{color:var(--text)}
+  input[type=range]{accent-color:var(--accent);cursor:pointer}
+  .opacity-row{display:flex;align-items:center;gap:12px;margin-top:16px}
+  .opacity-row label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.5px;white-space:nowrap}
+  .opacity-row input{flex:1}
+  .opacity-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);width:36px;text-align:right}
+  .err{display:none;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.3);border-radius:12px;padding:12px 16px;font-size:12px;font-family:'DM Mono',monospace;color:#ff9999;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔍</div>
+      <div><h1>Transparency Tester</h1><p>Test WebM & GIF transparency</p></div>
+    </div>
+    <a class="back-btn" href="index.html">← Back to Converter</a>
+  </header>
+  <div class="card">
+    <div class="clabel">Upload File to Test</div>
+    <div class="dropzone" id="dz">
+      <span class="icon">🎬</span>
+      <h3>Drop your WebM or GIF here</h3>
+      <p>Supports .webm and .gif files</p>
+      <div class="pick-btn" onclick="document.getElementById('fi').click()">Choose File</div>
+      <input type="file" id="fi" accept="video/webm,image/gif,.webm,.gif"/>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+  <div class="preview-outer" id="previewOuter">
+    <div class="card">
+      <div class="clabel">File Info</div>
+      <div class="file-info" id="fileInfo"></div>
+    </div>
+    <div class="card">
+      <div class="clabel">Background</div>
+      <div class="bg-switcher">
+        <span class="bg-label">Presets</span>
+        <div class="bg-swatch checker active" id="sw-checker" title="Checkerboard" onclick="setBg('checker')"></div>
+        <div class="bg-swatch" style="background:#ffffff" id="sw-white" title="White" onclick="setBg('#ffffff')"></div>
+        <div class="bg-swatch" style="background:#000000" id="sw-black" title="Black" onclick="setBg('#000000')"></div>
+        <div class="bg-swatch" style="background:#ff0000" id="sw-red" title="Red" onclick="setBg('#ff0000')"></div>
+        <div class="bg-swatch" style="background:#00cc44" id="sw-green" title="Green" onclick="setBg('#00cc44')"></div>
+        <div class="bg-swatch" style="background:#0066ff" id="sw-blue" title="Blue" onclick="setBg('#0066ff')"></div>
+        <div class="bg-swatch" style="background:#ffcc00" id="sw-yellow" title="Yellow" onclick="setBg('#ffcc00')"></div>
+        <div class="bg-swatch" style="background:#ff00ff" id="sw-magenta" title="Magenta" onclick="setBg('#ff00ff')"></div>
+        <div class="custom-color-wrap">
+          <label>CUSTOM</label>
+          <input type="color" id="customColor" value="#7c6aff" oninput="setBg(this.value);clearSwatchActive()"/>
+        </div>
+      </div>
+      <div class="stage-wrap checker-bg" id="stage"></div>
+      <div class="opacity-row">
+        <label>OPACITY</label>
+        <input type="range" id="opacity" min="0" max="100" value="100" oninput="setOpacity(this.value)"/>
+        <span class="opacity-val" id="opVal">100%</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="clabel">Size & Dimensions</div>
+      <div class="size-controls">
+        <div class="size-item">
+          <label>WIDTH (px)</label>
+          <input type="number" id="wInput" min="10" max="3000" placeholder="auto" oninput="onWidthChange()"/>
+        </div>
+        <div class="size-item">
+          <label>HEIGHT (px)</label>
+          <input type="number" id="hInput" min="10" max="3000" placeholder="auto" oninput="onHeightChange()"/>
+        </div>
+        <button class="lock-btn locked" id="lockBtn" onclick="toggleLock()">🔒 Locked</button>
+      </div>
+      <div class="presets">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);align-self:center">PRESETS:</span>
+        <div class="preset-btn" onclick="applyPreset(100)">100%</div>
+        <div class="preset-btn" onclick="applyPreset(75)">75%</div>
+        <div class="preset-btn" onclick="applyPreset(50)">50%</div>
+        <div class="preset-btn" onclick="applyPreset(25)">25%</div>
+        <div class="preset-btn" onclick="setSize(200,200)">200×200</div>
+        <div class="preset-btn" onclick="setSize(400,400)">400×400</div>
+        <div class="preset-btn" onclick="setSize(512,512)">512×512</div>
+        <div class="preset-btn" onclick="setSize(1920,1080)">1920×1080</div>
+        <div class="preset-btn" onclick="resetSize()">Reset</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let naturalW=0,naturalH=0,aspectRatio=1,locked=true,fileType='';
+function handleFile(file){
+  const isWebm=file.type==='video/webm'||file.name.toLowerCase().endsWith('.webm');
+  const isGif=file.type==='image/gif'||file.name.toLowerCase().endsWith('.gif');
+  if(!isWebm&&!isGif){showErr('Please upload a .webm or .gif file only.');return;}
+  hideErr();fileType=isWebm?'webm':'gif';
+  const url=URL.createObjectURL(file);
+  const stage=document.getElementById('stage');
+  stage.innerHTML='';
+  if(fileType==='webm'){
+    const vid=document.createElement('video');
+    vid.id='mediaEl';vid.autoplay=true;vid.loop=true;vid.muted=true;vid.playsInline=true;
+    vid.style.cssText='display:block;transition:all .2s;max-width:100%';
+    vid.src=url;
+    vid.onloadedmetadata=()=>{
+      naturalW=vid.videoWidth;naturalH=vid.videoHeight;aspectRatio=naturalW/naturalH;
+      document.getElementById('wInput').value=naturalW;document.getElementById('hInput').value=naturalH;
+      applySize(naturalW,naturalH);showInfo(file,naturalW,naturalH);
+    };
+    stage.appendChild(vid);vid.play();
+  }else{
+    const img=document.createElement('img');img.id='mediaEl';
+    img.style.cssText='display:block;transition:all .2s;max-width:100%';
+    img.src=url;
+    img.onload=()=>{
+      naturalW=img.naturalWidth;naturalH=img.naturalHeight;aspectRatio=naturalW/naturalH;
+      document.getElementById('wInput').value=naturalW;document.getElementById('hInput').value=naturalH;
+      applySize(naturalW,naturalH);showInfo(file,naturalW,naturalH);
+    };
+    stage.appendChild(img);
+  }
+  document.getElementById('previewOuter').style.display='block';
+  document.getElementById('opacity').value=100;document.getElementById('opVal').textContent='100%';
+}
+function showInfo(file,w,h){
+  const mb=(file.size/1024/1024).toFixed(2);
+  const g=gcd(w,h);
+  document.getElementById('fileInfo').innerHTML=
+    `<div class="pill">Name <span>${file.name}</span></div>
+     <div class="pill">Format <span>${fileType.toUpperCase()}</span></div>
+     <div class="pill">Size <span>${mb} MB</span></div>
+     <div class="pill">Dimensions <span>${w} × ${h}px</span></div>
+     <div class="pill">Aspect Ratio <span>${w/g}:${h/g}</span></div>`;
+}
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function setBg(val){
+  const stage=document.getElementById('stage');
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+  if(val==='checker'){
+    stage.className='stage-wrap checker-bg';
+    document.getElementById('sw-checker').classList.add('active');
+  }else{
+    stage.className='stage-wrap';stage.style.background=val;
+    const map={'#ffffff':'sw-white','#000000':'sw-black','#ff0000':'sw-red','#00cc44':'sw-green','#0066ff':'sw-blue','#ffcc00':'sw-yellow','#ff00ff':'sw-magenta'};
+    if(map[val])document.getElementById(map[val]).classList.add('active');
+  }
+}
+function clearSwatchActive(){document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));document.getElementById('stage').className='stage-wrap';}
+function setOpacity(v){document.getElementById('opVal').textContent=v+'%';const el=document.getElementById('mediaEl');if(el)el.style.opacity=v/100;}
+function toggleLock(){locked=!locked;const btn=document.getElementById('lockBtn');btn.textContent=locked?'🔒 Locked':'🔓 Free';btn.classList.toggle('locked',locked);}
+function onWidthChange(){const w=parseInt(document.getElementById('wInput').value);if(!w||!locked)return;const h=Math.round(w/aspectRatio);document.getElementById('hInput').value=h;applySize(w,h);}
+function onHeightChange(){const h=parseInt(document.getElementById('hInput').value);if(!h||!locked)return;const w=Math.round(h*aspectRatio);document.getElementById('wInput').value=w;applySize(w,h);}
+function applySize(w,h){const el=document.getElementById('mediaEl');if(!el)return;el.style.width=w+'px';el.style.height=h+'px';}
+function setSize(w,h){document.getElementById('wInput').value=w;document.getElementById('hInput').value=h;applySize(w,h);}
+function applyPreset(pct){setSize(Math.round(naturalW*pct/100),Math.round(naturalH*pct/100));}
+function resetSize(){setSize(naturalW,naturalH);}
+function showErr(m){const e=document.getElementById('err');e.textContent='⚠ '+m;e.style.display='block';}
+function hideErr(){document.getElementById('err').style.display='none';}
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+</script>
+</body>
+</html>

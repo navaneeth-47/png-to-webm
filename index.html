@@ -83,7 +83,10 @@
       <div class="logo-icon">🎞</div>
       <div><h1>FrameForge</h1><p>PNG Sequence → WebM / GIF</p></div>
     </div>
-    <div class="badge">100% IN-BROWSER · NO UPLOAD</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a href="test.html" style="display:flex;align-items:center;gap:8px;padding:8px 18px;background:#1c1c28;border:1px solid #2a2a3d;border-radius:10px;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='#7c6aff';this.style.color='#7c6aff'" onmouseout="this.style.borderColor='#2a2a3d';this.style.color='#e8e8f0'">🔍 Test Transparency</a>
+      <div class="badge">100% IN-BROWSER · NO UPLOAD</div>
+    </div>
   </header>
   <div class="status-row">
     <div class="dot loading" id="dot"></div>
@@ -131,8 +134,7 @@
       </div>
       <div class="sitem" id="qrow">
         <label>QUALITY — lower = better &nbsp;<span id="qlbl">28</span></label>
-        <input type="range" id="qual" min="4" max="55" value="28"
-          oninput="document.getElementById('qlbl').textContent=this.value"/>
+        <input type="range" id="qual" min="4" max="55" value="28" oninput="document.getElementById('qlbl').textContent=this.value"/>
       </div>
     </div>
     <div class="info">
@@ -161,60 +163,36 @@
 </div>
 <script>
 const { createFFmpeg, fetchFile } = FFmpeg;
-let ff = null, files = [], fmt = 'webm', outURL = null;
-
-(async () => {
-  try {
-    ff = createFFmpeg({
-      log: true,
-      corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-      progress: ({ ratio }) => { const p=Math.min(Math.round(ratio*100),99); setP(p,`Encoding… ${p}%`); }
-    });
-    await ff.load();
-    setSt('ready','FFmpeg ready ✓');
-    chk();
-  } catch(e) { setSt('error','FFmpeg failed: '+e.message); console.error(e); }
+let ff=null,files=[],fmt='webm',outURL=null;
+(async()=>{
+  try{
+    ff=createFFmpeg({log:true,corePath:'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',progress:({ratio})=>{const p=Math.min(Math.round(ratio*100),99);setP(p,`Encoding… ${p}%`);}});
+    await ff.load();setSt('ready','FFmpeg ready ✓');chk();
+  }catch(e){setSt('error','FFmpeg failed: '+e.message);console.error(e);}
 })();
-
-function setSt(s,m){ document.getElementById('dot').className='dot '+s; document.getElementById('stxt').textContent=m; }
-function setP(p,m){ document.getElementById('pf').style.width=p+'%'; document.getElementById('pt').textContent=m; }
-function showErr(m){ const e=document.getElementById('err'); e.textContent='⚠ '+m; e.style.display='block'; }
-function hideErr(){ document.getElementById('err').style.display='none'; }
-function chk(){ document.getElementById('cvtBtn').disabled=!(ff&&files.length); }
-
-function setFmt(f){
-  fmt=f;
-  document.getElementById('bw').classList.toggle('on',f==='webm');
-  document.getElementById('bg').classList.toggle('on',f==='gif');
-  document.getElementById('qrow').style.display=f==='webm'?'':'none';
-}
-
+function setSt(s,m){document.getElementById('dot').className='dot '+s;document.getElementById('stxt').textContent=m;}
+function setP(p,m){document.getElementById('pf').style.width=p+'%';document.getElementById('pt').textContent=m;}
+function showErr(m){const e=document.getElementById('err');e.textContent='⚠ '+m;e.style.display='block';}
+function hideErr(){document.getElementById('err').style.display='none';}
+function chk(){document.getElementById('cvtBtn').disabled=!(ff&&files.length);}
+function setFmt(f){fmt=f;document.getElementById('bw').classList.toggle('on',f==='webm');document.getElementById('bg').classList.toggle('on',f==='gif');document.getElementById('qrow').style.display=f==='webm'?'':'none';}
 function handleFiles(raw){
   const pngs=Array.from(raw).filter(f=>f.name.toLowerCase().endsWith('.png'));
   if(!pngs.length){showErr('No PNG files found.');return;}
   hideErr();
   files=pngs.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
   document.getElementById('fcnt').textContent=`✓ ${files.length} frames loaded — sorted by filename`;
-  const strip=document.getElementById('strip'); strip.innerHTML='';
+  const strip=document.getElementById('strip');strip.innerHTML='';
   const n=Math.min(files.length,20);
-  for(let i=0;i<n;i++){
-    const img=document.createElement('img'); img.className='thumb';
-    img.src=URL.createObjectURL(files[i]); strip.appendChild(img);
-  }
-  if(files.length>20){
-    const d=document.createElement('div');
-    d.style.cssText='flex-shrink:0;width:60px;height:60px;border-radius:8px;border:1px solid #2a2a3d;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b6b88;text-align:center;background:#1c1c28;padding:4px';
-    d.textContent=`+${files.length-20} more`; strip.appendChild(d);
-  }
-  document.getElementById('sw').style.display='block'; chk();
+  for(let i=0;i<n;i++){const img=document.createElement('img');img.className='thumb';img.src=URL.createObjectURL(files[i]);strip.appendChild(img);}
+  if(files.length>20){const d=document.createElement('div');d.style.cssText='flex-shrink:0;width:60px;height:60px;border-radius:8px;border:1px solid #2a2a3d;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b6b88;text-align:center;background:#1c1c28;padding:4px';d.textContent=`+${files.length-20} more`;strip.appendChild(d);}
+  document.getElementById('sw').style.display='block';chk();
 }
-
 const dz=document.getElementById('dz');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFiles(e.dataTransfer.files);});
 document.getElementById('fi').addEventListener('change',e=>handleFiles(e.target.files));
-
 async function go(){
   if(!ff||!files.length)return;
   hideErr();
@@ -222,15 +200,11 @@ async function go(){
   const qual=document.getElementById('qual').value;
   const loop=document.getElementById('loop').value;
   const btn=document.getElementById('cvtBtn');
-  btn.disabled=true; btn.textContent='⏳ Converting…';
+  btn.disabled=true;btn.textContent='⏳ Converting…';
   document.getElementById('pw').style.display='block';
   setP(0,'Writing frames…');
-  try {
-    for(let i=0;i<files.length;i++){
-      const name=`f${String(i).padStart(4,'0')}.png`;
-      ff.FS('writeFile',name,await fetchFile(files[i]));
-      setP(Math.round((i/files.length)*30),`Writing frame ${i+1} / ${files.length}…`);
-    }
+  try{
+    for(let i=0;i<files.length;i++){const name=`f${String(i).padStart(4,'0')}.png`;ff.FS('writeFile',name,await fetchFile(files[i]));setP(Math.round((i/files.length)*30),`Writing frame ${i+1} / ${files.length}…`);}
     setP(35,'Running FFmpeg…');
     if(fmt==='webm'){
       await ff.run('-framerate',fps,'-i','f%04d.png','-c:v','libvpx-vp9','-pix_fmt','yuva420p','-crf',qual,'-b:v','0','-auto-alt-ref','0','out.webm');
@@ -239,7 +213,7 @@ async function go(){
       const blob=new Blob([data.buffer],{type:'video/webm'});
       showPreview(blob,'webm',files.length,fps);
       ff.FS('unlink','out.webm');
-    } else {
+    }else{
       setP(40,'Pass 1: palette…');
       await ff.run('-framerate',fps,'-i','f%04d.png','-vf','palettegen=reserve_transparent=1','pal.png');
       setP(65,'Pass 2: building GIF…');
@@ -248,18 +222,15 @@ async function go(){
       const data=ff.FS('readFile','out.gif');
       const blob=new Blob([data.buffer],{type:'image/gif'});
       showPreview(blob,'gif',files.length,fps);
-      ff.FS('unlink','out.gif'); ff.FS('unlink','pal.png');
+      ff.FS('unlink','out.gif');ff.FS('unlink','pal.png');
     }
     for(let i=0;i<files.length;i++){try{ff.FS('unlink',`f${String(i).padStart(4,'0')}.png`);}catch{}}
-    setP(100,'Done! ✓');
-    btn.textContent='⚡ Convert Again'; btn.disabled=false;
-  } catch(e){
-    console.error(e); showErr('Conversion failed: '+(e.message||e));
-    btn.textContent='⚡ Convert Now'; btn.disabled=false;
-    setP(0,''); document.getElementById('pw').style.display='none';
+    setP(100,'Done! ✓');btn.textContent='⚡ Convert Again';btn.disabled=false;
+  }catch(e){
+    console.error(e);showErr('Conversion failed: '+(e.message||e));
+    btn.textContent='⚡ Convert Now';btn.disabled=false;setP(0,'');document.getElementById('pw').style.display='none';
   }
 }
-
 function showPreview(blob,f,frameCount,fps){
   if(outURL)URL.revokeObjectURL(outURL);
   outURL=URL.createObjectURL(blob);
@@ -267,21 +238,12 @@ function showPreview(blob,f,frameCount,fps){
   const vid=document.getElementById('pv');
   const gif=document.getElementById('pg');
   const dl=document.getElementById('dlBtn');
-  sec.style.display='block';
-  sec.scrollIntoView({behavior:'smooth',block:'start'});
+  sec.style.display='block';sec.scrollIntoView({behavior:'smooth',block:'start'});
   if(f==='webm'){vid.src=outURL;vid.style.display='block';gif.style.display='none';}
   else{gif.src=outURL;gif.style.display='block';vid.style.display='none';}
-  const dur=(frameCount/fps).toFixed(1);
-  const mb=(blob.size/1024/1024).toFixed(2);
-  document.getElementById('pmeta').innerHTML=
-    `<div class="pill">Frames <span>${frameCount}</span></div>
-     <div class="pill">Duration <span>${dur}s</span></div>
-     <div class="pill">Size <span>${mb} MB</span></div>
-     <div class="pill">Format <span>${f.toUpperCase()}</span></div>
-     <div class="pill">FPS <span>${fps}</span></div>`;
-  dl.href=outURL; dl.download=`frameforge.${f}`;
-  dl.textContent=`⬇ Download ${f.toUpperCase()} (${mb} MB)`;
-  dl.style.display='block';
+  const dur=(frameCount/fps).toFixed(1);const mb=(blob.size/1024/1024).toFixed(2);
+  document.getElementById('pmeta').innerHTML=`<div class="pill">Frames <span>${frameCount}</span></div><div class="pill">Duration <span>${dur}s</span></div><div class="pill">Size <span>${mb} MB</span></div><div class="pill">Format <span>${f.toUpperCase()}</span></div><div class="pill">FPS <span>${fps}</span></div>`;
+  dl.href=outURL;dl.download=`frameforge.${f}`;dl.textContent=`⬇ Download ${f.toUpperCase()} (${mb} MB)`;dl.style.display='block';
 }
 </script>
 </body>
