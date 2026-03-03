@@ -7,11 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <style>
-  :root {
-    --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;
-    --accent:#7c6aff;--accent2:#ff6ab0;--green:#4fffb0;--text:#e8e8f0;
-    --muted:#6b6b88;--c1:#1a1a2e;--c2:#16213e;
-  }
+  :root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;--accent:#7c6aff;--accent2:#ff6ab0;--green:#4fffb0;--text:#e8e8f0;--muted:#6b6b88;--c1:#1a1a2e;--c2:#16213e;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none;z-index:0}
@@ -56,10 +52,19 @@
   .sitem label{display:block;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px;letter-spacing:.5px}
   select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 14px;appearance:none;cursor:pointer;outline:none}
   select:focus{border-color:var(--accent)}
-  input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
   .ftoggle{display:flex;gap:8px}
   .fbtn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;text-align:center;transition:all .2s;font-weight:500}
   .fbtn.on{background:linear-gradient(135deg,var(--accent),#9b8aff);border-color:transparent;color:#fff}
+  .q-presets{display:flex;gap:6px}
+  .qbtn{flex:1;padding:10px 4px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .qbtn:hover{border-color:var(--accent);color:var(--text)}
+  .qbtn.on{border-color:var(--accent);background:rgba(124,106,255,.15);color:var(--text)}
+  .qbtn.on .q-name{color:var(--accent)}
+  .qbtn.on .q-crf{color:var(--accent);opacity:.7}
+  .q-icon{font-size:18px;line-height:1}
+  .q-name{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .q-crf{font-size:9px;color:var(--muted);letter-spacing:.3px}
+  @media(max-width:560px){.q-presets{flex-wrap:wrap}.qbtn{min-width:calc(33% - 4px)}}
   .cvt-btn{width:100%;padding:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:8px}
   .cvt-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
   .cvt-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -158,8 +163,35 @@
         </select>
       </div>
       <div class="sitem" id="qrow">
-        <label>QUALITY — lower = better &nbsp;<span id="qlbl">28</span></label>
-        <input type="range" id="qual" min="4" max="55" value="28" oninput="document.getElementById('qlbl').textContent=this.value"/>
+        <label>QUALITY PRESET</label>
+        <div class="q-presets">
+          <div class="qbtn" id="q1" onclick="setQuality(1)">
+            <span class="q-icon">🚀</span>
+            <span class="q-name">Draft</span>
+            <span class="q-crf">CRF 40</span>
+          </div>
+          <div class="qbtn" id="q2" onclick="setQuality(2)">
+            <span class="q-icon">⚡</span>
+            <span class="q-name">Fast</span>
+            <span class="q-crf">CRF 28</span>
+          </div>
+          <div class="qbtn on" id="q3" onclick="setQuality(3)">
+            <span class="q-icon">⚖️</span>
+            <span class="q-name">Balanced</span>
+            <span class="q-crf">CRF 18</span>
+          </div>
+          <div class="qbtn" id="q4" onclick="setQuality(4)">
+            <span class="q-icon">✨</span>
+            <span class="q-name">High</span>
+            <span class="q-crf">CRF 10</span>
+          </div>
+          <div class="qbtn" id="q5" onclick="setQuality(5)">
+            <span class="q-icon">💎</span>
+            <span class="q-name">Lossless</span>
+            <span class="q-crf">CRF 4</span>
+          </div>
+        </div>
+        <input type="hidden" id="qual" value="18"/>
       </div>
     </div>
     <div class="info" id="fmtInfo">
@@ -234,6 +266,12 @@ function setFmt(f){
   document.getElementById('qrow').style.display=f==='webm'?'':'none';
 }
 
+function setQuality(level){
+  const map={1:40,2:28,3:18,4:10,5:4};
+  document.getElementById('qual').value=map[level];
+  for(let i=1;i<=5;i++) document.getElementById('q'+i).classList.toggle('on',i===level);
+}
+
 function handleFiles(raw){
   const pngs=Array.from(raw).filter(f=>f.name.toLowerCase().endsWith('.png'));
   if(!pngs.length){showErr('No PNG files found.');return;}
@@ -304,7 +342,11 @@ async function go(){
   if(!files.length){showErr('No PNG files loaded.');btn.disabled=false;btn.textContent='⚡ Convert Now';return;}
   setP(0,'Writing frames…');
   try{
-    for(let i=0;i<files.length;i++){const name=`f${String(i).padStart(4,'0')}.png`;ff.FS('writeFile',name,await fetchFile(files[i]));setP(Math.round((i/files.length)*30),`Writing frame ${i+1} / ${files.length}…`);}
+    for(let i=0;i<files.length;i++){
+      const name=`f${String(i).padStart(4,'0')}.png`;
+      ff.FS('writeFile',name,await fetchFile(files[i]));
+      setP(Math.round((i/files.length)*30),`Writing frame ${i+1} / ${files.length}…`);
+    }
     setP(35,'Running FFmpeg…');
     if(fmt==='webm'){
       await ff.run('-framerate',fps,'-i','f%04d.png','-c:v','libvpx-vp9','-pix_fmt','yuva420p','-crf',qual,'-b:v','0','-auto-alt-ref','0','out.webm');
