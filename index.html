@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FrameForge — PNG Sequence Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #7c6aff;
+    --accent2: #ff6ab0;
+    --green: #4fffb0;
+    --text: #e8e8f0;
+    --muted: #6b6b88;
+    --checker1: #1a1a2e;
+    --checker2: #16213e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { background: var(--accent); top: -200px; left: -100px; }
+  .orb2 { background: var(--accent2); bottom: -200px; right: -100px; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 56px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .logo-text p {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 3px;
+  }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--green);
+    letter-spacing: 0.5px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #3a3a55; }
+  .card-label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: var(--surface2);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(124, 106, 255, 0.05);
+  }
+  .upload-zone.dragover::after {
+    content: 'Drop your PNGs here!';
+    position: absolute;
+    inset: 0;
+    background: rgba(124,106,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    border-radius: 14px;
+  }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+  .upload-zone h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .upload-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 24px;
+    background: linear-gradient(135deg, var(--accent), #9b8aff);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .upload-btn:hover { opacity: 0.85; }
+  #fileInput { display: none; }
+
+  /* Frame strip */
+  .frame-strip-wrapper {
+    display: none;
+    margin-top: 20px;
+  }
+  .frame-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--green);
+    margin-bottom: 10px;
+  }
+  .frame-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .frame-thumb {
+    flex-shrink: 0;
+    width: 60px; height: 60px;
+    border-radius: 8px;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    background-image:
+      linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+      linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+      linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+    background-color: #22223a;
+  }
+
+  /* Settings */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 560px) { .settings-grid { grid-template-columns: 1fr; } }
+
+  .setting-item label {
+    display: block;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .setting-item select,
+  .setting-item input[type="range"] {
+    width: 100%;
+  }
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .range-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    width: 36px;
+    text-align: right;
+  }
+
+  /* Format toggle */
+  .format-toggle {
+    display: flex;
+    gap: 8px;
+  }
+  .fmt-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .fmt-btn.active {
+    background: linear-gradient(135deg, var(--accent), #9b8aff);
+    border-color: transparent;
+    color: white;
+  }
+
+  /* Convert button */
+  .convert-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .convert-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .convert-btn:active:not(:disabled) { transform: translateY(0); }
+  .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Progress */
+  .progress-wrap {
+    display: none;
+    margin-top: 16px;
+  }
+  .progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .progress-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* FFmpeg loader */
+  .ffmpeg-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.loading {
+    background: #ffb347;
+    animation: pulse 1s infinite;
+  }
+  .status-dot.ready { background: var(--green); }
+  .status-dot.error { background: #ff6b6b; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Preview section */
+  .preview-section {
+    display: none;
+  }
+  .checker-bg {
+    background-image:
+      linear-gradient(45deg, var(--checker1) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--checker1) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--checker1) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--checker1) 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+    background-color: var(--checker2);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    position: relative;
+  }
+  #previewVideo, #previewGif {
+    max-width: 100%;
+    max-height: 360px;
+    border-radius: 8px;
+    display: none;
+  }
+
+  .preview-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .meta-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .meta-pill span { color: var(--text); }
+
+  /* Download button */
+  .download-btn {
+    display: none;
+    width: 100%;
+    padding: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--green);
+    border-radius: 14px;
+    color: var(--green);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    margin-top: 16px;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+  }
+  .download-btn:hover {
+    background: var(--green);
+    color: var(--bg);
+  }
+
+  /* Info box */
+  .info-box {
+    background: rgba(124,106,255,0.07);
+    border: 1px solid rgba(124,106,255,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-top: 16px;
+  }
+  .info-box strong { color: var(--accent); }
+
+  /* Error */
+  .error-box {
+    display: none;
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: #ff9999;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎞</div>
+      <div class="logo-text">
+        <h1>FrameForge</h1>
+        <p>PNG Sequence → WebM / GIF</p>
+      </div>
+    </div>
+    <div class="badge">100% IN-BROWSER · NO UPLOAD</div>
+  </header>
+
+  <!-- FFmpeg Status -->
+  <div class="ffmpeg-status">
+    <div class="status-dot loading" id="statusDot"></div>
+    <span id="statusText">Loading FFmpeg engine… (first load ~30 seconds)</span>
+  </div>
+
+  <!-- STEP 1: Upload -->
+  <div class="card">
+    <div class="card-label">Step 1 — Upload PNG Sequence</div>
+    <div class="upload-zone" id="uploadZone">
+      <span class="upload-icon">🖼️</span>
+      <h3>Drag & drop your PNG frames here</h3>
+      <p>Select all PNG files at once — they'll be sorted automatically</p>
+      <div class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose PNG Files</div>
+      <input type="file" id="fileInput" multiple accept="image/png" />
+    </div>
+    <div class="frame-strip-wrapper" id="stripWrapper">
+      <div class="frame-count" id="frameCount"></div>
+      <div class="frame-strip" id="frameStrip"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Settings -->
+  <div class="card">
+    <div class="card-label">Step 2 — Settings</div>
+    <div class="settings-grid">
+
+      <div class="setting-item">
+        <label>OUTPUT FORMAT</label>
+        <div class="format-toggle">
+          <div class="fmt-btn active" id="btnWebm" onclick="setFormat('webm')">WebM</div>
+          <div class="fmt-btn" id="btnGif" onclick="setFormat('gif')">GIF</div>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <label>FRAME RATE (FPS)</label>
+        <select id="fps">
+          <option value="12">12 fps — smooth GIF-like</option>
+          <option value="24" selected>24 fps — cinematic</option>
+          <option value="30">30 fps — standard video</option>
+          <option value="60">60 fps — ultra smooth</option>
+        </select>
+      </div>
+
+      <div class="setting-item">
+        <label>LOOP</label>
+        <select id="loop">
+          <option value="0">Loop forever</option>
+          <option value="1">Play once</option>
+        </select>
+      </div>
+
+      <div class="setting-item" id="qualityRow">
+        <label>QUALITY (lower = better) <span id="crfLabel">28</span></label>
+        <div class="range-row">
+          <input type="range" id="quality" min="4" max="55" value="28"
+            oninput="document.getElementById('crfLabel').textContent=this.value" />
+        </div>
+      </div>
+
+    </div>
+
+    <div class="info-box" id="formatInfo">
+      <strong>WebM (VP9)</strong> — Full alpha transparency support. Plays in Chrome, Firefox, Edge. Best choice for transparent animations.<br>
+      <strong>GIF</strong> — Works everywhere. Binary transparency only (no soft edges). Limited to 256 colours.
+    </div>
+  </div>
+
+  <!-- STEP 3: Convert -->
+  <div class="card">
+    <div class="card-label">Step 3 — Convert</div>
+    <button class="convert-btn" id="convertBtn" onclick="startConvert()" disabled>
+      ⚡ Convert Now
+    </button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+      <div class="progress-text" id="progressText">Preparing…</div>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- STEP 4: Preview + Download -->
+  <div class="card preview-section" id="previewSection">
+    <div class="card-label">Step 4 — Preview & Download</div>
+    <div class="checker-bg">
+      <video id="previewVideo" autoplay loop muted playsinline></video>
+      <img id="previewGif" alt="GIF Preview" />
+    </div>
+    <div class="preview-meta" id="previewMeta"></div>
+    <a class="download-btn" id="downloadBtn">⬇ Download</a>
+  </div>
+
+</div>
+
+<script type="module">
+import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
+import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+let ffmpeg = null;
+let sortedFiles = [];
+let outputFormat = 'webm';
+let outputURL = null;
+
+// ── Load FFmpeg ──────────────────────────────────────────────────────────────
+async function loadFFmpeg() {
+  setStatus('loading', 'Loading FFmpeg engine… (first load ~30 seconds)');
+  try {
+    ffmpeg = new FFmpeg();
+
+    ffmpeg.on('log', ({ message }) => {
+      console.log('[FFmpeg]', message);
+    });
+
+    ffmpeg.on('progress', ({ progress, time }) => {
+      const pct = Math.min(Math.round(progress * 100), 99);
+      setProgress(pct, `Encoding… ${pct}%`);
+    });
+
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.9/dist/esm';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+
+    setStatus('ready', 'FFmpeg ready ✓');
+    checkReady();
+  } catch (e) {
+    setStatus('error', 'FFmpeg failed to load. Make sure you are using Chrome/Firefox and that the required server headers are set (COOP/COEP).');
+    console.error(e);
+  }
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function setStatus(state, msg) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot ' + state;
+  txt.textContent = msg;
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = msg;
+}
+
+function checkReady() {
+  const ready = ffmpeg && sortedFiles.length > 0;
+  document.getElementById('convertBtn').disabled = !ready;
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = '⚠ ' + msg;
+  box.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+// ── Format toggle ────────────────────────────────────────────────────────────
+window.setFormat = function(fmt) {
+  outputFormat = fmt;
+  document.getElementById('btnWebm').classList.toggle('active', fmt === 'webm');
+  document.getElementById('btnGif').classList.toggle('active', fmt === 'gif');
+  document.getElementById('qualityRow').style.display = fmt === 'webm' ? '' : 'none';
+};
+
+// ── File Upload ──────────────────────────────────────────────────────────────
+function handleFiles(files) {
+  const pngs = Array.from(files).filter(f => f.type === 'image/png' || f.name.endsWith('.png'));
+  if (pngs.length === 0) { showError('No PNG files found. Please select PNG images.'); return; }
+  hideError();
+
+  // Sort by filename
+  sortedFiles = pngs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+  document.getElementById('frameCount').textContent =
+    `✓ ${sortedFiles.length} frames loaded — sorted by filename`;
+
+  const strip = document.getElementById('frameStrip');
+  strip.innerHTML = '';
+  const previewCount = Math.min(sortedFiles.length, 20);
+  for (let i = 0; i < previewCount; i++) {
+    const img = document.createElement('img');
+    img.className = 'frame-thumb';
+    img.src = URL.createObjectURL(sortedFiles[i]);
+    strip.appendChild(img);
+  }
+  if (sortedFiles.length > 20) {
+    const more = document.createElement('div');
+    more.style.cssText = 'flex-shrink:0;width:60px;height:60px;border-radius:8px;border:1px solid #2a2a3d;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6b6b88;font-family:DM Mono,monospace;text-align:center;background:#1c1c28;';
+    more.textContent = `+${sortedFiles.length - 20}\nmore`;
+    strip.appendChild(more);
+  }
+
+  document.getElementById('stripWrapper').style.display = 'block';
+  checkReady();
+}
+
+// Drag and drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
+
+// ── Convert ──────────────────────────────────────────────────────────────────
+window.startConvert = async function() {
+  if (!ffmpeg || sortedFiles.length === 0) return;
+  hideError();
+
+  const fps = document.getElementById('fps').value;
+  const quality = document.getElementById('quality').value;
+  const loopVal = document.getElementById('loop').value;
+
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Converting…';
+
+  const pw = document.getElementById('progressWrap');
+  pw.style.display = 'block';
+  setProgress(0, 'Writing frames to memory…');
+
+  try {
+    // Clean up previous run
+    try { await ffmpeg.deleteFile('output.webm'); } catch {}
+    try { await ffmpeg.deleteFile('output.gif'); } catch {}
+    try { await ffmpeg.deleteFile('palette.png'); } catch {}
+    for (let i = 0; i < sortedFiles.length; i++) {
+      try { await ffmpeg.deleteFile(`frame${String(i).padStart(4,'0')}.png`); } catch {}
+    }
+
+    // Write frames
+    for (let i = 0; i < sortedFiles.length; i++) {
+      const name = `frame${String(i).padStart(4,'0')}.png`;
+      await ffmpeg.writeFile(name, await fetchFile(sortedFiles[i]));
+      setProgress(Math.round((i / sortedFiles.length) * 30), `Writing frame ${i+1} of ${sortedFiles.length}…`);
+    }
+
+    setProgress(35, 'Running conversion…');
+
+    if (outputFormat === 'webm') {
+      // WebM with full alpha
+      await ffmpeg.exec([
+        '-framerate', fps,
+        '-i', 'frame%04d.png',
+        '-c:v', 'libvpx-vp9',
+        '-pix_fmt', 'yuva420p',
+        '-crf', quality,
+        '-b:v', '0',
+        '-auto-alt-ref', '0',
+        'output.webm'
+      ]);
+
+      setProgress(90, 'Reading output…');
+      const data = await ffmpeg.readFile('output.webm');
+      const blob = new Blob([data.buffer], { type: 'video/webm' });
+      showPreview(blob, 'webm', sortedFiles.length, fps);
+
+    } else {
+      // GIF — two-pass with transparent palette
+      setProgress(40, 'Pass 1: Generating palette…');
+      await ffmpeg.exec([
+        '-framerate', fps,
+        '-i', 'frame%04d.png',
+        '-vf', 'palettegen=reserve_transparent=1',
+        'palette.png'
+      ]);
+
+      setProgress(65, 'Pass 2: Building GIF…');
+      await ffmpeg.exec([
+        '-framerate', fps,
+        '-i', 'frame%04d.png',
+        '-i', 'palette.png',
+        '-filter_complex', `paletteuse=alpha_threshold=128${loopVal === '0' ? '' : ''}`,
+        '-loop', loopVal,
+        'output.gif'
+      ]);
+
+      setProgress(90, 'Reading output…');
+      const data = await ffmpeg.readFile('output.gif');
+      const blob = new Blob([data.buffer], { type: 'image/gif' });
+      showPreview(blob, 'gif', sortedFiles.length, fps);
+    }
+
+    setProgress(100, 'Done! ✓');
+    btn.textContent = '⚡ Convert Again';
+    btn.disabled = false;
+
+  } catch (err) {
+    console.error(err);
+    showError('Conversion failed: ' + (err.message || err));
+    btn.textContent = '⚡ Convert Now';
+    btn.disabled = false;
+    setProgress(0, '');
+    pw.style.display = 'none';
+  }
+};
+
+// ── Preview ──────────────────────────────────────────────────────────────────
+function showPreview(blob, fmt, frameCount, fps) {
+  if (outputURL) URL.revokeObjectURL(outputURL);
+  outputURL = URL.createObjectURL(blob);
+
+  const section = document.getElementById('previewSection');
+  const video = document.getElementById('previewVideo');
+  const gif = document.getElementById('previewGif');
+  const dl = document.getElementById('downloadBtn');
+
+  section.style.display = 'block';
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  if (fmt === 'webm') {
+    video.src = outputURL;
+    video.style.display = 'block';
+    gif.style.display = 'none';
+  } else {
+    gif.src = outputURL;
+    gif.style.display = 'block';
+    video.style.display = 'none';
+  }
+
+  // Meta pills
+  const duration = (frameCount / fps).toFixed(1);
+  const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+  document.getElementById('previewMeta').innerHTML = `
+    <div class="meta-pill">Frames: <span>${frameCount}</span></div>
+    <div class="meta-pill">Duration: <span>${duration}s</span></div>
+    <div class="meta-pill">Size: <span>${sizeMB} MB</span></div>
+    <div class="meta-pill">Format: <span>${fmt.toUpperCase()}</span></div>
+    <div class="meta-pill">FPS: <span>${fps}</span></div>
+  `;
+
+  dl.href = outputURL;
+  dl.download = `frameforge-output.${fmt}`;
+  dl.textContent = `⬇ Download ${fmt.toUpperCase()} (${sizeMB} MB)`;
+  dl.style.display = 'block';
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+loadFFmpeg();
+</script>
+</body>
+</html>
