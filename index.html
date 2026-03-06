@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FrameForge — PNG · Video · BG Removal</title>
+<title>FrameForge — PNG · Video → WebM</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
 <style>
   :root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;--accent:#7c6aff;--accent2:#ff6ab0;--green:#4fffb0;--text:#e8e8f0;--muted:#6b6b88;--c1:#1a1a2e;--c2:#16213e;}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -37,62 +36,58 @@
   .dropzone h3{font-size:17px;font-weight:700;margin-bottom:6px}
   .dropzone p{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace}
   .pick-btn{display:inline-block;margin-top:20px;padding:10px 24px;background:linear-gradient(135deg,var(--accent),#9b8aff);border-radius:10px;font-size:14px;font-weight:700;color:#fff;cursor:pointer}
-  #fi,#fiVid,#fiBg{display:none}
+  #fi,#fiVid{display:none}
   .strip-wrap{display:none;margin-top:20px}
   .fcnt{font-family:'DM Mono',monospace;font-size:12px;color:var(--green);margin-bottom:10px}
-  .strip,.bg-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  .strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
   .thumb{flex-shrink:0;width:60px;height:60px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:repeating-conic-gradient(#1a1a2e 0% 25%,#22223a 0% 50%) 0 0/10px 10px}
   .mode-tabs{display:flex;gap:8px;margin-bottom:20px}
-  .tab-btn{flex:1;padding:11px 6px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;text-align:center;transition:all .2s;font-weight:500;letter-spacing:.3px}
+  .tab-btn{flex:1;padding:11px 6px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;text-align:center;transition:all .2s;font-weight:500;letter-spacing:.3px}
   .tab-btn.on{background:linear-gradient(135deg,var(--accent),#9b8aff);border-color:transparent;color:#fff}
   .vid-preview-wrap{display:none;margin-top:20px}
   .vid-preview-inner{background:repeating-conic-gradient(#1a1a2e 0% 25%,#22223a 0% 50%) 0 0/12px 12px;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:center}
   .vid-preview-inner video,.vid-preview-inner img{max-width:100%;max-height:200px;border-radius:8px;display:block;margin:0 auto}
   .vid-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;justify-content:center}
-  .ai-modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-  .ai-mode-btn{padding:16px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;text-align:left}
-  .ai-mode-btn:hover{border-color:var(--accent)}
-  .ai-mode-btn.on{border-color:var(--accent);background:rgba(124,106,255,.1)}
-  .am-icon{font-size:22px;margin-bottom:6px;display:block}
-  .am-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
-  .am-desc{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.5}
-  .am-tag{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:6px;font-size:10px;font-family:'DM Mono',monospace;background:var(--surface);border:1px solid var(--border);color:var(--muted)}
-  .ai-mode-btn.on .am-tag{border-color:var(--accent);color:var(--accent)}
-  .model-status{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
-  .model-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
-  .model-dot.loading{background:#ffb347;animation:pulse 1s infinite}
-  .model-dot.ready{background:var(--green)}
-  .bg-strip-wrap{display:none;margin-top:16px}
+  /* Settings grid */
   .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:560px){.sgrid{grid-template-columns:1fr}.ai-modes{grid-template-columns:1fr}}
+  .sgrid.three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:600px){.sgrid,.sgrid.three{grid-template-columns:1fr}}
   .sitem label{display:block;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px;letter-spacing:.5px}
   select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 14px;appearance:none;cursor:pointer;outline:none}
   select:focus{border-color:var(--accent)}
   .ftoggle{display:flex;gap:8px}
   .fbtn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;text-align:center;transition:all .2s;font-weight:500}
   .fbtn.on{background:linear-gradient(135deg,var(--accent),#9b8aff);border-color:transparent;color:#fff}
+  /* Quality presets */
   .q-presets{display:flex;gap:6px}
-  .qbtn{flex:1;padding:10px 4px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .qbtn{flex:1;padding:10px 4px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Mono',monospace;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px}
   .qbtn:hover{border-color:var(--accent);color:var(--text)}
   .qbtn.on{border-color:var(--accent);background:rgba(124,106,255,.15);color:var(--text)}
   .qbtn.on .q-name{color:var(--accent)}
-  .qbtn.on .q-crf{color:var(--accent);opacity:.7}
-  .q-icon{font-size:18px;line-height:1}
+  .qbtn.on .q-sub{color:var(--accent);opacity:.7}
+  .q-icon{font-size:17px;line-height:1}
   .q-name{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
-  .q-crf{font-size:9px;color:var(--muted);letter-spacing:.3px}
+  .q-sub{font-size:9px;color:var(--muted);letter-spacing:.3px}
   @media(max-width:560px){.q-presets{flex-wrap:wrap}.qbtn{min-width:calc(33% - 4px)}}
+  /* Trim inputs */
+  .trim-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .trim-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 14px;outline:none}
+  .trim-input:focus{border-color:var(--accent)}
+  .trim-input::placeholder{color:var(--muted)}
+  /* Convert */
   .cvt-btn{width:100%;padding:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:8px}
   .cvt-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
   .cvt-btn:disabled{opacity:.5;cursor:not-allowed}
   .prog-wrap{display:none;margin-top:16px}
   .prog-bg{background:var(--surface2);border-radius:10px;height:6px;overflow:hidden;margin-bottom:8px}
-  .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px;transition:width .2s;width:0}
+  .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px;transition:width .3s;width:0}
   .prog-txt{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
   .err{display:none;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.3);border-radius:12px;padding:14px 16px;font-size:13px;font-family:'DM Mono',monospace;color:#ff9999;margin-top:16px}
   .info{background:rgba(124,106,255,.07);border:1px solid rgba(124,106,255,.2);border-radius:12px;padding:14px 16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);line-height:1.7;margin-top:16px}
   .info strong{color:var(--accent)}
   .info.warn{background:rgba(255,180,71,.06);border-color:rgba(255,180,71,.25)}
   .info.warn strong{color:#ffb347}
+  /* Preview */
   .prev-section{display:none}
   .checker{background-image:linear-gradient(45deg,var(--c1) 25%,transparent 25%),linear-gradient(-45deg,var(--c1) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--c1) 75%),linear-gradient(-45deg,transparent 75%,var(--c1) 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0;background-color:var(--c2);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:200px}
   #pv,#pg{max-width:100%;max-height:360px;border-radius:8px;display:none}
@@ -101,11 +96,11 @@
   .pill span{color:var(--text)}
   .dl-btn{display:none;width:100%;padding:16px;background:var(--surface2);border:1px solid var(--green);border-radius:14px;color:var(--green);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;margin-top:16px;text-decoration:none}
   .dl-btn:hover{background:var(--green);color:var(--bg)}
-  #offCanvas{display:none}
+  /* Settings section divider */
+  .sdivider{grid-column:1/-1;border:none;border-top:1px solid var(--border);margin:4px 0}
 </style>
 </head>
 <body>
-<canvas id="offCanvas"></canvas>
 <div class="orb o1"></div>
 <div class="orb o2"></div>
 <div class="wrap">
@@ -113,7 +108,7 @@
   <header>
     <div class="logo">
       <div class="logo-icon">🎞</div>
-      <div><h1>FrameForge</h1><p>PNG · Video · BG Removal → WebM</p></div>
+      <div><h1>FrameForge</h1><p>PNG Sequence · GIF · MP4 · MOV → WebM</p></div>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
       <a href="test.html" style="display:flex;align-items:center;gap:8px;padding:8px 18px;background:#1c1c28;border:1px solid #2a2a3d;border-radius:10px;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='#7c6aff';this.style.color='#7c6aff'" onmouseout="this.style.borderColor='#2a2a3d';this.style.color='#e8e8f0'">🔍 Test Transparency</a>
@@ -128,11 +123,10 @@
 
   <!-- STEP 1 -->
   <div class="card">
-    <div class="clabel">Step 1 — Choose Mode</div>
+    <div class="clabel">Step 1 — Upload Source</div>
     <div class="mode-tabs">
       <div class="tab-btn on" id="tabPng" onclick="switchMode('png')">🖼️ PNG Sequence</div>
       <div class="tab-btn" id="tabVid" onclick="switchMode('vid')">🎬 GIF / MP4 / MOV</div>
-      <div class="tab-btn" id="tabBg" onclick="switchMode('bg')">✂️ Remove BG</div>
     </div>
 
     <!-- PNG mode -->
@@ -140,7 +134,7 @@
       <div class="dropzone" id="dz">
         <span class="icon">🖼️</span>
         <h3>Drag & drop your PNG frames here</h3>
-        <p>Select all PNG files at once — sorted automatically</p>
+        <p>Select all PNG files at once — sorted automatically by filename</p>
         <div class="pick-btn" onclick="document.getElementById('fi').click()">Choose PNG Files</div>
         <input type="file" id="fi" multiple accept="image/png"/>
       </div>
@@ -167,56 +161,23 @@
         <strong>⚠️ MOV Note</strong> — MOV with ProRes 4444 alpha will have transparency preserved. Standard H.264 MOV will be converted without alpha.
       </div>
     </div>
-
-    <!-- BG Removal mode -->
-    <div id="bgMode" style="display:none">
-      <div class="ai-modes">
-        <div class="ai-mode-btn on" id="modeMediapipe" onclick="setAiMode('mediapipe')">
-          <span class="am-icon">⚡</span>
-          <div class="am-title">Fast Mode</div>
-          <div class="am-desc">MediaPipe Selfie. Best for people & portraits. Very fast.</div>
-          <span class="am-tag">~1MB · People</span>
-        </div>
-        <div class="ai-mode-btn" id="modeRmbg" onclick="setAiMode('rmbg')">
-          <span class="am-icon">💎</span>
-          <div class="am-title">Quality Mode</div>
-          <div class="am-desc">RMBG-1.4 by BRIA AI. Works on all subjects — objects, products, characters.</div>
-          <span class="am-tag">~44MB · Everything</span>
-        </div>
-      </div>
-      <div class="model-status" id="modelStatus">
-        <div class="model-dot" id="modelDot"></div>
-        <span id="modelTxt">Model loads automatically when you hit Convert</span>
-      </div>
-      <div class="dropzone" id="dzBg">
-        <span class="icon">✂️</span>
-        <h3>Drag & drop your video or GIF here</h3>
-        <p>Supports GIF · MP4 · MOV · WebM</p>
-        <div class="pick-btn" onclick="document.getElementById('fiBg').click()">Choose File</div>
-        <input type="file" id="fiBg" accept="image/gif,.gif,video/mp4,.mp4,video/quicktime,.mov,video/webm,.webm"/>
-      </div>
-      <div class="vid-preview-wrap" id="bgPreviewWrap">
-        <div class="vid-preview-inner" id="bgPreviewInner"></div>
-        <div class="vid-pills" id="bgPills"></div>
-      </div>
-      <div class="bg-strip-wrap" id="bgStripWrap">
-        <div class="fcnt" id="bgFrameCnt"></div>
-        <div class="bg-strip" id="bgStrip"></div>
-      </div>
-    </div>
   </div>
 
   <!-- STEP 2 -->
   <div class="card">
     <div class="clabel">Step 2 — Settings</div>
     <div class="sgrid">
+
+      <!-- Format (PNG mode only) -->
       <div class="sitem" id="fmtRow">
         <label>OUTPUT FORMAT</label>
         <div class="ftoggle">
           <div class="fbtn on" id="bw" onclick="setFmt('webm')">WebM</div>
-          <div class="fbtn" id="bg2" onclick="setFmt('gif')">GIF</div>
+          <div class="fbtn" id="bgif" onclick="setFmt('gif')">GIF</div>
         </div>
       </div>
+
+      <!-- FPS -->
       <div class="sitem">
         <label>FRAME RATE</label>
         <select id="fps">
@@ -226,6 +187,8 @@
           <option value="60">60 fps — smooth</option>
         </select>
       </div>
+
+      <!-- Loop -->
       <div class="sitem">
         <label>LOOP</label>
         <select id="loop">
@@ -233,27 +196,61 @@
           <option value="1">Play once</option>
         </select>
       </div>
-      <div class="sitem" id="qrow">
-        <label>QUALITY PRESET</label>
+
+      <!-- Resize -->
+      <div class="sitem">
+        <label>MAX RESOLUTION</label>
+        <select id="resize">
+          <option value="none">Original size</option>
+          <option value="1920">Cap at 1080p (1920px wide)</option>
+          <option value="1280">Cap at 720p (1280px wide)</option>
+          <option value="854">Cap at 480p (854px wide)</option>
+          <option value="640">Cap at 360p (640px wide)</option>
+        </select>
+      </div>
+
+      <!-- Quality -->
+      <div class="sitem" id="qrow" style="grid-column:1/-1">
+        <label>QUALITY PRESET &nbsp;<span id="qhint" style="color:var(--accent);font-size:10px"></span></label>
         <div class="q-presets">
-          <div class="qbtn" id="q1" onclick="setQuality(1)"><span class="q-icon">🚀</span><span class="q-name">Draft</span><span class="q-crf">CRF 40</span></div>
-          <div class="qbtn" id="q2" onclick="setQuality(2)"><span class="q-icon">⚡</span><span class="q-name">Fast</span><span class="q-crf">CRF 28</span></div>
-          <div class="qbtn on" id="q3" onclick="setQuality(3)"><span class="q-icon">⚖️</span><span class="q-name">Balanced</span><span class="q-crf">CRF 18</span></div>
-          <div class="qbtn" id="q4" onclick="setQuality(4)"><span class="q-icon">✨</span><span class="q-name">High</span><span class="q-crf">CRF 10</span></div>
-          <div class="qbtn" id="q5" onclick="setQuality(5)"><span class="q-icon">💎</span><span class="q-name">Lossless</span><span class="q-crf">CRF 4</span></div>
+          <div class="qbtn" id="q1" onclick="setQuality(1)">
+            <span class="q-icon">🚀</span><span class="q-name">Draft</span><span class="q-sub">CRF 40 · fast</span>
+          </div>
+          <div class="qbtn" id="q2" onclick="setQuality(2)">
+            <span class="q-icon">⚡</span><span class="q-name">Fast</span><span class="q-sub">CRF 28 · fast</span>
+          </div>
+          <div class="qbtn on" id="q3" onclick="setQuality(3)">
+            <span class="q-icon">⚖️</span><span class="q-name">Balanced</span><span class="q-sub">CRF 18 · good</span>
+          </div>
+          <div class="qbtn" id="q4" onclick="setQuality(4)">
+            <span class="q-icon">✨</span><span class="q-name">High</span><span class="q-sub">CRF 10 · slow</span>
+          </div>
+          <div class="qbtn" id="q5" onclick="setQuality(5)">
+            <span class="q-icon">💎</span><span class="q-name">Lossless</span><span class="q-sub">CRF 4 · slowest</span>
+          </div>
         </div>
         <input type="hidden" id="qual" value="18"/>
+        <input type="hidden" id="cpuUsed" value="4"/>
+        <input type="hidden" id="deadline" value="good"/>
       </div>
+
+      <!-- Trim (video mode only) -->
+      <div class="sitem" id="trimRow" style="grid-column:1/-1;display:none">
+        <label>TRIM (OPTIONAL) — leave blank to use full clip</label>
+        <div class="trim-row">
+          <input class="trim-input" id="trimStart" type="text" placeholder="Start  e.g. 0:02 or 2.5"/>
+          <input class="trim-input" id="trimEnd" type="text" placeholder="End  e.g. 0:08 or 8.0"/>
+        </div>
+      </div>
+
     </div>
+
     <div class="info" id="fmtInfo">
-      <strong>WebM (VP9)</strong> — Full alpha transparency. Chrome, Firefox, Edge.<br>
+      <strong>WebM (VP9)</strong> — Full alpha transparency. Works in Chrome, Firefox, Edge.<br>
       <strong>GIF</strong> — Works everywhere. Binary transparency only (no soft edges).
     </div>
     <div class="info" id="vidModeInfo" style="display:none">
-      <strong>Video → WebM</strong> — Output is always WebM (VP9). MOV with ProRes alpha retains transparency.
-    </div>
-    <div class="info" id="bgModeInfo" style="display:none">
-      <strong>BG Removal → WebM</strong> — Every frame processed by AI. Output is WebM VP9 with full alpha transparency.
+      <strong>Video → WebM</strong> — Output is always WebM VP9 with alpha. MOV ProRes 4444 retains existing transparency. Use Trim to cut a section without re-encoding the whole file.
     </div>
   </div>
 
@@ -282,10 +279,9 @@
 </div>
 <script>
 const {createFFmpeg,fetchFile}=FFmpeg;
-let ff=null,files=[],fmt='webm',outURL=null,mode='png',vidFile=null,bgFile=null;
-let aiMode='mediapipe',mpModel=null,onnxSession=null;
+let ff=null,files=[],fmt='webm',outURL=null,mode='png',vidFile=null;
 
-// ── Boot FFmpeg ───────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────────
 (async()=>{
   try{
     ff=createFFmpeg({
@@ -303,31 +299,24 @@ function setSt(s,m){document.getElementById('dot').className='dot '+s;document.g
 function setP(p,m){document.getElementById('pf').style.width=p+'%';document.getElementById('pt').textContent=m;}
 function showErr(m){const e=document.getElementById('err');e.textContent='⚠ '+m;e.style.display='block';}
 function hideErr(){document.getElementById('err').style.display='none';}
-function chk(){
-  document.getElementById('cvtBtn').disabled=!(ff&&(
-    mode==='png'?files.length>0:
-    mode==='vid'?vidFile!==null:
-    bgFile!==null
-  ));
-}
+function chk(){document.getElementById('cvtBtn').disabled=!(ff&&(mode==='png'?files.length>0:vidFile!==null));}
 
 // ── Mode switch ───────────────────────────────────────────────────────────────
 function switchMode(m){
   mode=m;
   document.getElementById('tabPng').classList.toggle('on',m==='png');
   document.getElementById('tabVid').classList.toggle('on',m==='vid');
-  document.getElementById('tabBg').classList.toggle('on',m==='bg');
   document.getElementById('pngMode').style.display=m==='png'?'':'none';
   document.getElementById('vidMode').style.display=m==='vid'?'':'none';
-  document.getElementById('bgMode').style.display=m==='bg'?'':'none';
   document.getElementById('fmtInfo').style.display=m==='png'?'':'none';
   document.getElementById('vidModeInfo').style.display=m==='vid'?'':'none';
-  document.getElementById('bgModeInfo').style.display=m==='bg'?'':'none';
-  document.getElementById('fmtRow').style.display=(m==='vid'||m==='bg')?'none':'';
-  vidFile=null;bgFile=null;files=[];
+  document.getElementById('fmtRow').style.display=m==='vid'?'none':'';
+  document.getElementById('trimRow').style.display=m==='vid'?'':'none';
+  vidFile=null;files=[];
   document.getElementById('vidPreviewWrap').style.display='none';
-  document.getElementById('bgPreviewWrap').style.display='none';
-  document.getElementById('bgStripWrap').style.display='none';
+  document.getElementById('vidPreviewInner').innerHTML='';
+  document.getElementById('vidPills').innerHTML='';
+  document.getElementById('movWarn').style.display='none';
   document.getElementById('sw').style.display='none';
   chk();
 }
@@ -336,15 +325,52 @@ function switchMode(m){
 function setFmt(f){
   fmt=f;
   document.getElementById('bw').classList.toggle('on',f==='webm');
-  document.getElementById('bg2').classList.toggle('on',f==='gif');
+  document.getElementById('bgif').classList.toggle('on',f==='gif');
   document.getElementById('qrow').style.display=f==='webm'?'':'none';
 }
 
-// ── Quality ───────────────────────────────────────────────────────────────────
+// ── Quality presets ───────────────────────────────────────────────────────────
+// CRF, cpu-used, deadline — tuned for best quality/speed tradeoff per level
+const Q_PRESETS={
+  1:{crf:40,cpu:8,deadline:'good',hint:'Tiny file · fast encode'},
+  2:{crf:28,cpu:6,deadline:'good',hint:'Small file · fast encode'},
+  3:{crf:18,cpu:4,deadline:'good',hint:'Balanced quality & speed'},
+  4:{crf:10,cpu:2,deadline:'best',hint:'Sharp edges · slow encode'},
+  5:{crf: 4,cpu:0,deadline:'best',hint:'Near-lossless · slowest'}
+};
 function setQuality(level){
-  const m={1:40,2:28,3:18,4:10,5:4};
-  document.getElementById('qual').value=m[level];
+  const p=Q_PRESETS[level];
+  document.getElementById('qual').value=p.crf;
+  document.getElementById('cpuUsed').value=p.cpu;
+  document.getElementById('deadline').value=p.deadline;
+  document.getElementById('qhint').textContent=p.hint;
   for(let i=1;i<=5;i++)document.getElementById('q'+i).classList.toggle('on',i===level);
+  // update sub labels to show deadline tag on high/lossless
+  document.getElementById('q4').querySelector('.q-sub').textContent='CRF 10 · deadline best';
+  document.getElementById('q5').querySelector('.q-sub').textContent='CRF 4 · deadline best';
+}
+// Init hint
+document.getElementById('qhint').textContent=Q_PRESETS[3].hint;
+
+// ── Build VP9 args ────────────────────────────────────────────────────────────
+function vp9Args(qual,cpuUsed,deadline,resize,extraVf){
+  const vfParts=[];
+  if(resize!=='none') vfParts.push(`scale='min(${resize},iw)':'min(${resize}*ih/iw,ih)':flags=lanczos`);
+  // always ensure even dimensions (VP9 requirement)
+  vfParts.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+  if(extraVf) vfParts.push(extraVf);
+  const args=[
+    '-c:v','libvpx-vp9',
+    '-pix_fmt','yuva420p',
+    '-crf',String(qual),
+    '-b:v','0',
+    '-auto-alt-ref','0',
+    '-deadline',deadline,
+    '-cpu-used',String(cpuUsed),
+    '-row-mt','1'
+  ];
+  if(vfParts.length) args.push('-vf',vfParts.join(','));
+  return args;
 }
 
 // ── PNG upload ────────────────────────────────────────────────────────────────
@@ -366,7 +392,7 @@ document.getElementById('dz').addEventListener('dragleave',e=>e.currentTarget.cl
 document.getElementById('dz').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('over');handleFiles(e.dataTransfer.files);});
 document.getElementById('fi').addEventListener('change',e=>handleFiles(e.target.files));
 
-// ── Video helpers ─────────────────────────────────────────────────────────────
+// ── Video upload ──────────────────────────────────────────────────────────────
 function getExt(file){
   const n=file.name.toLowerCase();
   if(n.endsWith('.gif')||file.type==='image/gif')return 'gif';
@@ -375,11 +401,12 @@ function getExt(file){
   if(n.endsWith('.webm')||file.type==='video/webm')return 'webm';
   return null;
 }
-function buildPreview(file,innerId,pillsId,wrapId){
+function handleVideo(file){
   const ext=getExt(file);
+  if(!ext){showErr('Please upload a GIF, MP4, MOV, or WebM file.');return;}
+  hideErr();vidFile=file;
   const url=URL.createObjectURL(file);
-  const inner=document.getElementById(innerId);
-  inner.innerHTML='';
+  const inner=document.getElementById('vidPreviewInner');inner.innerHTML='';
   if(ext==='gif'){
     const img=document.createElement('img');
     img.src=url;img.style.cssText='max-width:100%;max-height:200px;border-radius:8px;display:block;margin:0 auto';
@@ -391,18 +418,11 @@ function buildPreview(file,innerId,pillsId,wrapId){
     inner.appendChild(vid);
   }
   const mb=(file.size/1024/1024).toFixed(2);
-  const lbl={gif:'GIF',mp4:'MP4',mov:'MOV',webm:'WebM'}[ext]||ext.toUpperCase();
-  document.getElementById(pillsId).innerHTML=
+  const lbl={gif:'GIF',mp4:'MP4',mov:'MOV',webm:'WebM'}[ext];
+  document.getElementById('vidPills').innerHTML=
     `<div class="pill">📄 <span>${file.name}</span></div><div class="pill">Format <span>${lbl}</span></div><div class="pill">Size <span>${mb} MB</span></div>`;
-  document.getElementById(wrapId).style.display='block';
-}
-
-// ── Video tab ─────────────────────────────────────────────────────────────────
-function handleVideo(file){
-  if(!getExt(file)){showErr('Please upload a GIF, MP4, MOV, or WebM.');return;}
-  hideErr();vidFile=file;
-  buildPreview(file,'vidPreviewInner','vidPills','vidPreviewWrap');
-  document.getElementById('movWarn').style.display=getExt(file)==='mov'?'':'none';
+  document.getElementById('vidPreviewWrap').style.display='block';
+  document.getElementById('movWarn').style.display=ext==='mov'?'':'none';
   chk();
 }
 document.getElementById('dzVid').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('over');});
@@ -410,244 +430,44 @@ document.getElementById('dzVid').addEventListener('dragleave',e=>e.currentTarget
 document.getElementById('dzVid').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('over');if(e.dataTransfer.files[0])handleVideo(e.dataTransfer.files[0]);});
 document.getElementById('fiVid').addEventListener('change',e=>{if(e.target.files[0])handleVideo(e.target.files[0]);});
 
-// ── BG tab ────────────────────────────────────────────────────────────────────
-function handleBgFile(file){
-  if(!getExt(file)){showErr('Please upload a GIF, MP4, MOV, or WebM.');return;}
-  hideErr();bgFile=file;
-  buildPreview(file,'bgPreviewInner','bgPills','bgPreviewWrap');
-  chk();
-}
-document.getElementById('dzBg').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('over');});
-document.getElementById('dzBg').addEventListener('dragleave',e=>e.currentTarget.classList.remove('over'));
-document.getElementById('dzBg').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('over');if(e.dataTransfer.files[0])handleBgFile(e.dataTransfer.files[0]);});
-document.getElementById('fiBg').addEventListener('change',e=>{if(e.target.files[0])handleBgFile(e.target.files[0]);});
-
-// ── AI Mode ───────────────────────────────────────────────────────────────────
-function setAiMode(m){
-  aiMode=m;
-  document.getElementById('modeMediapipe').classList.toggle('on',m==='mediapipe');
-  document.getElementById('modeRmbg').classList.toggle('on',m==='rmbg');
-  setMdlSt('','Model loads automatically when you hit Convert');
-}
-function setMdlSt(s,t){
-  document.getElementById('modelDot').className='model-dot'+(s?' '+s:'');
-  document.getElementById('modelTxt').textContent=t;
-}
-
-// ── Load MediaPipe ────────────────────────────────────────────────────────────
-async function loadMediaPipe(){
-  if(mpModel)return mpModel;
-  setMdlSt('loading','Loading MediaPipe (~1MB)…');
-  return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/selfie_segmentation.js';
-    s.onload=async()=>{
-      try{
-        const seg=new SelfieSegmentation({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/${f}`});
-        seg.setOptions({modelSelection:1});
-        await seg.initialize();
-        mpModel=seg;
-        setMdlSt('ready','MediaPipe ready ✓');
-        resolve(seg);
-      }catch(e){setMdlSt('','Error: '+e.message);reject(e);}
-    };
-    s.onerror=()=>{setMdlSt('','Failed to load MediaPipe');reject(new Error('Script load failed'));};
-    document.head.appendChild(s);
-  });
-}
-
-// ── Load RMBG ONNX ────────────────────────────────────────────────────────────
-async function loadRmbg(){
-  if(onnxSession)return onnxSession;
-  setMdlSt('loading','Downloading RMBG-1.4 model (~44MB) — cached after first load…');
-  try{
-    ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
-    onnxSession=await ort.InferenceSession.create(
-      'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx',
-      {executionProviders:['wasm'],graphOptimizationLevel:'all'}
-    );
-    setMdlSt('ready','RMBG-1.4 ready ✓');
-    return onnxSession;
-  }catch(e){setMdlSt('','Model failed: '+e.message);throw e;}
-}
-
-// ── Extract frames from video ─────────────────────────────────────────────────
-async function extractFrames(file,fps){
-  const ext=getExt(file);
-  const inName='bgInput.'+ext;
-  setP(5,'Loading video…');
-  ff.FS('writeFile',inName,await fetchFile(file));
-  setP(12,'Extracting frames…');
-  await ff.run('-i',inName,'-vf',`fps=${fps}`,'-f','image2','frm_%04d.png');
-  const frameFiles=ff.FS('readdir','/').filter(f=>f.startsWith('frm_')&&f.endsWith('.png')).sort();
-  try{ff.FS('unlink',inName);}catch{}
-  setP(22,`Extracted ${frameFiles.length} frames`);
-  return frameFiles;
-}
-
-// ── Process frame — MediaPipe ─────────────────────────────────────────────────
-function processFrameMP(frameData,seg){
-  return new Promise(resolve=>{
-    const blob=new Blob([frameData],{type:'image/png'});
-    const url=URL.createObjectURL(blob);
-    const img=new Image();
-    img.onload=()=>{
-      const canvas=document.getElementById('offCanvas');
-      canvas.width=img.width;canvas.height=img.height;
-      seg.onResults(results=>{
-        const ctx=canvas.getContext('2d');
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.save();
-        ctx.drawImage(results.segmentationMask,0,0,canvas.width,canvas.height);
-        ctx.globalCompositeOperation='source-in';
-        ctx.drawImage(results.image,0,0,canvas.width,canvas.height);
-        ctx.restore();
-        URL.revokeObjectURL(url);
-        canvas.toBlob(b=>b.arrayBuffer().then(ab=>resolve(new Uint8Array(ab))),'image/png');
-      });
-      seg.send({image:img});
-    };
-    img.src=url;
-  });
-}
-
-// ── Process frame — RMBG ONNX ────────────────────────────────────────────────
-async function processFrameRmbg(frameData,session){
-  const blob=new Blob([frameData],{type:'image/png'});
-  const url=URL.createObjectURL(blob);
-  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
-  URL.revokeObjectURL(url);
-
-  const SZ=1024;
-  // Resize to model input
-  const tmp=document.createElement('canvas');tmp.width=SZ;tmp.height=SZ;
-  const tctx=tmp.getContext('2d');tctx.drawImage(img,0,0,SZ,SZ);
-  const {data}=tctx.getImageData(0,0,SZ,SZ);
-
-  // Build CHW float tensor, ImageNet normalised
-  const mean=[0.485,0.456,0.406],std=[0.229,0.224,0.225];
-  const input=new Float32Array(3*SZ*SZ);
-  for(let i=0;i<SZ*SZ;i++){
-    input[i]=(data[i*4]/255-mean[0])/std[0];
-    input[SZ*SZ+i]=(data[i*4+1]/255-mean[1])/std[1];
-    input[2*SZ*SZ+i]=(data[i*4+2]/255-mean[2])/std[2];
-  }
-  const tensor=new ort.Tensor('float32',input,[1,3,SZ,SZ]);
-  const out=await session.run({input:tensor});
-  const mask=out[Object.keys(out)[0]].data;
-
-  // Draw original image then apply alpha from mask
-  const canvas=document.getElementById('offCanvas');
-  canvas.width=img.width;canvas.height=img.height;
-  const ctx=canvas.getContext('2d');
-  ctx.drawImage(img,0,0);
-  const imgData=ctx.getImageData(0,0,img.width,img.height);
-
-  // Scale mask back to original size via a temp canvas
-  const mc=document.createElement('canvas');mc.width=SZ;mc.height=SZ;
-  const mctx=mc.getContext('2d');
-  const mid=mctx.createImageData(SZ,SZ);
-  for(let i=0;i<SZ*SZ;i++){
-    const v=Math.round(Math.max(0,Math.min(1,mask[i]))*255);
-    mid.data[i*4]=v;mid.data[i*4+1]=v;mid.data[i*4+2]=v;mid.data[i*4+3]=255;
-  }
-  mctx.putImageData(mid,0,0);
-  const sc=document.createElement('canvas');sc.width=img.width;sc.height=img.height;
-  const sctx=sc.getContext('2d');sctx.drawImage(mc,0,0,img.width,img.height);
-  const sm=sctx.getImageData(0,0,img.width,img.height);
-
-  for(let i=0;i<img.width*img.height;i++)imgData.data[i*4+3]=sm.data[i*4];
-  ctx.putImageData(imgData,0,0);
-
-  return new Promise(r=>canvas.toBlob(b=>b.arrayBuffer().then(ab=>r(new Uint8Array(ab))),'image/png'));
-}
-
-// ── Main convert ──────────────────────────────────────────────────────────────
+// ── Convert ───────────────────────────────────────────────────────────────────
 async function go(){
   if(!ff)return;
   hideErr();
-  const fps=document.getElementById('fps').value;
-  const qual=document.getElementById('qual').value;
-  const loop=document.getElementById('loop').value;
-  const btn=document.getElementById('cvtBtn');
+  const fps   = document.getElementById('fps').value;
+  const qual  = document.getElementById('qual').value;
+  const cpu   = document.getElementById('cpuUsed').value;
+  const dl    = document.getElementById('deadline').value;
+  const loop  = document.getElementById('loop').value;
+  const resize= document.getElementById('resize').value;
+  const trimS = document.getElementById('trimStart').value.trim();
+  const trimE = document.getElementById('trimEnd').value.trim();
+  const btn   = document.getElementById('cvtBtn');
   btn.disabled=true;btn.textContent='⏳ Converting…';
   document.getElementById('pw').style.display='block';
 
-  // ── BG Removal ──────────────────────────────────────────────────────────────
-  if(mode==='bg'){
-    if(!bgFile){showErr('No file loaded.');btn.disabled=false;btn.textContent='⚡ Convert Now';return;}
-    try{
-      setP(2,'Loading AI model…');
-      let seg=null,session=null;
-      if(aiMode==='mediapipe') seg=await loadMediaPipe();
-      else session=await loadRmbg();
-
-      const frameFiles=await extractFrames(bgFile,fps);
-      if(!frameFiles.length)throw new Error('No frames extracted — file may be unsupported.');
-
-      document.getElementById('bgFrameCnt').textContent=`Processing ${frameFiles.length} frames…`;
-      document.getElementById('bgStripWrap').style.display='block';
-      const bgStrip=document.getElementById('bgStrip');bgStrip.innerHTML='';
-
-      const processed=[];
-      for(let i=0;i<frameFiles.length;i++){
-        const pct=22+Math.round((i/frameFiles.length)*63);
-        setP(pct,`Removing background: frame ${i+1} / ${frameFiles.length}…`);
-        const fd=ff.FS('readFile',frameFiles[i]);
-        const out=aiMode==='mediapipe'?await processFrameMP(fd,seg):await processFrameRmbg(fd,session);
-        processed.push(out);
-        if(i%5===0||i===frameFiles.length-1){
-          const th=document.createElement('img');th.className='thumb';
-          th.src=URL.createObjectURL(new Blob([out],{type:'image/png'}));
-          bgStrip.appendChild(th);bgStrip.scrollLeft=bgStrip.scrollWidth;
-        }
-        try{ff.FS('unlink',frameFiles[i]);}catch{}
-        await new Promise(r=>setTimeout(r,0)); // yield to browser
-      }
-
-      setP(87,'Encoding to WebM…');
-      for(let i=0;i<processed.length;i++)
-        ff.FS('writeFile',`enc_${String(i).padStart(4,'0')}.png`,processed[i]);
-
-      await ff.run(
-        '-framerate',fps,'-i','enc_%04d.png',
-        '-c:v','libvpx-vp9','-pix_fmt','yuva420p',
-        '-crf',qual,'-b:v','0','-auto-alt-ref','0',
-        '-cpu-used','4','-row-mt','1',
-        'final.webm'
-      );
-
-      setP(97,'Reading output…');
-      const data=ff.FS('readFile','final.webm');
-      const blob=new Blob([data.buffer],{type:'video/webm'});
-      showPreview(blob,'webm',processed.length,fps);
-      for(let i=0;i<processed.length;i++){try{ff.FS('unlink',`enc_${String(i).padStart(4,'0')}.png`);}catch{}}
-      try{ff.FS('unlink','final.webm');}catch{}
-      document.getElementById('bgFrameCnt').textContent=`✓ ${processed.length} frames processed`;
-      setP(100,'Done! ✓');btn.textContent='⚡ Convert Again';btn.disabled=false;
-    }catch(e){
-      console.error(e);showErr('BG removal failed: '+(e.message||e));
-      btn.textContent='⚡ Convert Now';btn.disabled=false;setP(0,'');
-      document.getElementById('pw').style.display='none';
-    }
-    return;
-  }
-
-  // ── Video → WebM ─────────────────────────────────────────────────────────────
+  // ── Video / GIF → WebM ──────────────────────────────────────────────────────
   if(mode==='vid'){
     if(!vidFile){showErr('No file loaded.');btn.disabled=false;btn.textContent='⚡ Convert Now';return;}
     const ext=getExt(vidFile);
     const inName='input.'+ext;
     try{
-      setP(5,'Loading file…');
+      setP(5,'Loading file into memory…');
       ff.FS('writeFile',inName,await fetchFile(vidFile));
-      setP(20,'Converting…');
-      const args=['-i',inName,'-c:v','libvpx-vp9','-pix_fmt','yuva420p','-crf',qual,'-b:v','0','-auto-alt-ref','0','-cpu-used','4','-row-mt','1'];
-      if(ext==='gif') args.push('-vf','scale=trunc(iw/2)*2:trunc(ih/2)*2');
-      else args.push('-an');
-      args.push('out.webm');
+      setP(20,'Encoding to WebM…');
+
+      const args=['-i',inName];
+      // Trim args — must come before output
+      if(trimS) args.push('-ss',trimS);
+      if(trimE) args.push('-to',trimE);
+
+      const vArgs=vp9Args(qual,cpu,dl,resize, ext==='gif'?null:null);
+      args.push(...vArgs,'-an','out.webm');
+
+      setP(25,'Running VP9 encoder…');
       await ff.run(...args);
-      setP(90,'Reading output…');
+
+      setP(92,'Reading output…');
       const data=ff.FS('readFile','out.webm');
       const blob=new Blob([data.buffer],{type:'video/webm'});
       showPreview(blob,'webm');
@@ -661,28 +481,35 @@ async function go(){
     return;
   }
 
-  // ── PNG Sequence ──────────────────────────────────────────────────────────────
+  // ── PNG Sequence ─────────────────────────────────────────────────────────────
   if(!files.length){showErr('No PNG files loaded.');btn.disabled=false;btn.textContent='⚡ Convert Now';return;}
   setP(0,'Writing frames…');
   try{
     for(let i=0;i<files.length;i++){
       ff.FS('writeFile',`f${String(i).padStart(4,'0')}.png`,await fetchFile(files[i]));
-      setP(Math.round((i/files.length)*30),`Writing frame ${i+1} / ${files.length}…`);
+      setP(Math.round((i/files.length)*28),`Writing frame ${i+1} / ${files.length}…`);
     }
-    setP(35,'Running FFmpeg…');
+    setP(30,'Running FFmpeg…');
+
     if(fmt==='webm'){
-      await ff.run('-framerate',fps,'-i','f%04d.png','-c:v','libvpx-vp9','-pix_fmt','yuva420p','-crf',qual,'-b:v','0','-auto-alt-ref','0','-cpu-used','4','-row-mt','1','out.webm');
+      const args=['-framerate',fps,'-i','f%04d.png'];
+      const vArgs=vp9Args(qual,cpu,dl,resize,null);
+      args.push(...vArgs,'out.webm');
+      await ff.run(...args);
+      setP(92,'Reading output…');
       const data=ff.FS('readFile','out.webm');
       showPreview(new Blob([data.buffer],{type:'video/webm'}),'webm',files.length,fps);
-      ff.FS('unlink','out.webm');
+      try{ff.FS('unlink','out.webm');}catch{}
     }else{
-      setP(40,'Pass 1: palette…');
+      // GIF output (PNG sequence only)
+      setP(35,'Pass 1: generating palette…');
       await ff.run('-framerate',fps,'-i','f%04d.png','-vf','palettegen=reserve_transparent=1','pal.png');
-      setP(65,'Pass 2: GIF…');
+      setP(65,'Pass 2: encoding GIF…');
       await ff.run('-framerate',fps,'-i','f%04d.png','-i','pal.png','-filter_complex','paletteuse=alpha_threshold=128','-loop',loop,'out.gif');
+      setP(92,'Reading output…');
       const data=ff.FS('readFile','out.gif');
       showPreview(new Blob([data.buffer],{type:'image/gif'}),'gif',files.length,fps);
-      ff.FS('unlink','out.gif');ff.FS('unlink','pal.png');
+      try{ff.FS('unlink','out.gif');ff.FS('unlink','pal.png');}catch{}
     }
     for(let i=0;i<files.length;i++){try{ff.FS('unlink',`f${String(i).padStart(4,'0')}.png`);}catch{}}
     setP(100,'Done! ✓');btn.textContent='⚡ Convert Again';btn.disabled=false;
